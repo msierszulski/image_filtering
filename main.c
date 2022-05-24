@@ -19,6 +19,9 @@ typedef struct
 void read_pgm_file(FILE *fin, image *img);
 void write_pgm_file(FILE *fout, image *img);
 void median_filter(image *img, int window);
+void threshold(image *img, int threshold);
+void morph_dilation(image *img);
+void morph_erosion(image *img);
 
 int main(int argc, char *argv[])
 {
@@ -41,7 +44,13 @@ int main(int argc, char *argv[])
 
     read_pgm_file(fin, &img);
 
-    median_filter(&img, 3);
+    // median_filter(&img, 3);
+
+    threshold(&img, 0x7A);
+
+    // morph_dilation(&img);
+
+    morph_erosion(&img);
 
     write_pgm_file(fout, &img);
 
@@ -87,7 +96,7 @@ void write_pgm_file(FILE *fout, image *img)
     }
 }
 
-unsigned char img_get_value(image *img, int width, int height)
+unsigned char img_get_value(image *img, int height, int width)
 {
     if (width >= 0 && width < img->width && height >= 0 && height < img->height)
     {
@@ -95,7 +104,7 @@ unsigned char img_get_value(image *img, int width, int height)
     }
     else
     {
-        return '\0';
+        return 0x0;
     }
 }
 
@@ -110,19 +119,108 @@ void median_filter(image *img, int window)
 
     matrix = (unsigned char *)malloc(window * window * sizeof(unsigned char));
 
-    for (int y = 0; y < img->width; y++)
+    for (int x = 0; x < img->width; x++)
     {
-        for (int x = 0; x < img->height; x++)
+        for (int y = 0; y < img->height; y++)
         {
             int index = 0;
 
             for (int n = -1; n < +2; n++)
                 for (int m = -1; m < +2; m++)
-                    matrix[index++] = img_get_value(img, y + m, x + n);
+                    matrix[index++] = img_get_value(img, y + n, x + m);
 
             qsort(matrix, window * window, sizeof(unsigned char), compare);
 
-            img->pixels[x][y] = matrix[4];
+            img->pixels[y][x] = matrix[4];
         }
+    }
+}
+
+void threshold(image *img, int threshold)
+{
+    for (int x = 0; x < img->width; x++)
+    {
+        for (int y = 0; y < img->height; y++)
+        {
+            if (img->pixels[y][x] > threshold)
+            {
+                img->pixels[y][x] = 0xff;
+            }
+            else
+            {
+                img->pixels[y][x] = 0x0;
+            }
+            // printf("%X ", img->pixels[y][x]);
+        }
+    }
+}
+
+void morph_dilation(image *img)
+{
+    unsigned char **img_copy = (unsigned char **)malloc(img->height * sizeof(unsigned char *));
+
+    for (int i = 0; i < img->height; i++)
+    {
+        img_copy[i] = (unsigned char *)malloc(img->width * sizeof(unsigned char));
+        memcpy(img_copy[i], img->pixels[i], img->width * sizeof(unsigned char));
+    }
+
+    for (int x = 1; x < (img->width - 1); x++)
+    {
+        for (int y = 1; y < (img->height - 1); y++)
+        {
+            // printf("%X ", img->pixels[y][x]);
+            if (img->pixels[y][x] == 0xff)
+            {
+                img_copy[y][x] = 0xff;
+                img_copy[y - 1][x] = 0xff;
+                img_copy[y + 1][x] = 0xff;
+                img_copy[y][x - 1] = 0xff;
+                img_copy[y][x + 1] = 0xff;
+                img_copy[y - 1][x - 1] = 0xff;
+                img_copy[y - 1][x + 1] = 0xff;
+                img_copy[y + 1][x - 1] = 0xff;
+                img_copy[y + 1][x + 1] = 0xff;
+            }
+        }
+    }
+
+    for (int i = 0; i < img->height; i++)
+    {
+        memcpy(img->pixels[i], img_copy[i], img->width * sizeof(unsigned char));
+    }
+}
+
+void morph_erosion(image *img)
+{
+    unsigned char **img_copy = (unsigned char **)malloc(img->height * sizeof(unsigned char *));
+
+    for (int i = 0; i < img->height; i++)
+    {
+        img_copy[i] = (unsigned char *)malloc(img->width * sizeof(unsigned char));
+        memcpy(img_copy[i], img->pixels[i], img->width * sizeof(unsigned char));
+    }
+
+    int sum = 0;
+
+    for (int x = 1; x < (img->width - 1); x++)
+    {
+        for (int y = 1; y < (img->height - 1); y++)
+        {
+            // printf("%X ", img->pixels[y][x]);
+            sum = img->pixels[y][x] + img->pixels[y - 1][x] + img->pixels[y + 1][x] + img->pixels[y][x - 1] +
+                img->pixels[y][x + 1] + img->pixels[y - 1][x - 1] + img->pixels[y - 1][x + 1] +
+                img->pixels[y + 1][x - 1] + img->pixels[y + 1][x + 1];
+
+            if (img->pixels[y][x] == 0xff && sum < 0x7F8)
+            {
+                img_copy[y][x] = 0x0;
+            }
+        }
+    }
+
+    for (int i = 0; i < img->height; i++)
+    {
+        memcpy(img->pixels[i], img_copy[i], img->width * sizeof(unsigned char));
     }
 }
