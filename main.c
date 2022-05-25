@@ -22,6 +22,7 @@ void median_filter(image *img, int window);
 void threshold(image *img, int threshold);
 void morph_dilation(image *img);
 void morph_erosion(image *img);
+void homomorphic_filter(image *img);
 
 int main(int argc, char *argv[])
 {
@@ -46,11 +47,13 @@ int main(int argc, char *argv[])
 
     // median_filter(&img, 3);
 
-    threshold(&img, 0x7A);
+    // threshold(&img, 0x7A);
 
     // morph_dilation(&img);
 
-    morph_erosion(&img);
+    // morph_erosion(&img);
+
+    homomorphic_filter(&img);
 
     write_pgm_file(fout, &img);
 
@@ -150,7 +153,6 @@ void threshold(image *img, int threshold)
             {
                 img->pixels[y][x] = 0x0;
             }
-            // printf("%X ", img->pixels[y][x]);
         }
     }
 }
@@ -169,7 +171,6 @@ void morph_dilation(image *img)
     {
         for (int y = 1; y < (img->height - 1); y++)
         {
-            // printf("%X ", img->pixels[y][x]);
             if (img->pixels[y][x] == 0xff)
             {
                 img_copy[y][x] = 0xff;
@@ -189,6 +190,8 @@ void morph_dilation(image *img)
     {
         memcpy(img->pixels[i], img_copy[i], img->width * sizeof(unsigned char));
     }
+
+    free(img_copy);
 }
 
 void morph_erosion(image *img)
@@ -207,10 +210,9 @@ void morph_erosion(image *img)
     {
         for (int y = 1; y < (img->height - 1); y++)
         {
-            // printf("%X ", img->pixels[y][x]);
             sum = img->pixels[y][x] + img->pixels[y - 1][x] + img->pixels[y + 1][x] + img->pixels[y][x - 1] +
-                img->pixels[y][x + 1] + img->pixels[y - 1][x - 1] + img->pixels[y - 1][x + 1] +
-                img->pixels[y + 1][x - 1] + img->pixels[y + 1][x + 1];
+                  img->pixels[y][x + 1] + img->pixels[y - 1][x - 1] + img->pixels[y - 1][x + 1] +
+                  img->pixels[y + 1][x - 1] + img->pixels[y + 1][x + 1];
 
             if (img->pixels[y][x] == 0xff && sum < 0x7F8)
             {
@@ -222,5 +224,27 @@ void morph_erosion(image *img)
     for (int i = 0; i < img->height; i++)
     {
         memcpy(img->pixels[i], img_copy[i], img->width * sizeof(unsigned char));
+    }
+
+    free(img_copy);
+}
+
+void homomorphic_filter(image *img)
+{
+    double **img_copy = (double **)malloc(img->height * sizeof(double *));
+
+    for (int i = 0; i < img->height; i++)
+    {
+        img_copy[i] = (double *)malloc(img->width * sizeof(double));
+    }
+
+    for (int x = 1; x < (img->width - 1); x++)
+    {
+        for (int y = 1; y < (img->height - 1); y++)
+        {
+            img_copy[y][x] = log(img->pixels[y][x]);
+            printf("%f ", img_copy[y][x]);
+        }
+        printf("\n");
     }
 }
