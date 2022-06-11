@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <float.h>
 #include <complex.h>
-#include "fft-real-pair.h"
+#include <time.h>
 
 /*-------------------------------------------------------------------------
    This computes an in-place complex-to-complex FFT
@@ -224,39 +224,145 @@ void homomorphic_filter(image *img);
 
 int main(int argc, char *argv[])
 {
-    image img;
+    clock_t start_t, end_t;
+    double total_t;
 
+    image img1;
     FILE *fin = fopen(argv[1], "r");
     if (fin == 0)
     {
         printf("Error, aborting.\n");
         return -1;
     }
+    read_pgm_file(fin, &img1);
+    fclose(fin);
 
-    FILE *fout = fopen(argv[2], "w");
-    if (fout == 0)
+    image img2;
+    FILE *fin2 = fopen(argv[1], "r");
+    if (fin2 == 0)
     {
-        fclose(fout);
+        printf("Error, aborting.\n");
+        return -1;
+    }
+    read_pgm_file(fin2, &img2);
+    fclose(fin2);
+
+    image img3;
+    FILE *fin3 = fopen(argv[1], "r");
+    if (fin3 == 0)
+    {
+        printf("Error, aborting.\n");
+        return -1;
+    }
+    read_pgm_file(fin3, &img3);
+    fclose(fin3);
+
+    image img4;
+    FILE *fin4 = fopen(argv[1], "r");
+    if (fin4 == 0)
+    {
+        printf("Error, aborting.\n");
+        return -1;
+    }
+    read_pgm_file(fin4, &img4);
+    fclose(fin4);
+
+    image img5;
+    FILE *fin5 = fopen(argv[1], "r");
+    if (fin5 == 0)
+    {
+        printf("Error, aborting.\n");
+        return -1;
+    }
+    read_pgm_file(fin5, &img5);
+    fclose(fin5);
+
+    FILE *fout1 = fopen("median.pgm", "w");
+    FILE *fout2 = fopen("threshold.pgm", "w");
+    FILE *fout3 = fopen("dialtion.pgm", "w");
+    FILE *fout4 = fopen("erosion.pgm", "w");
+    FILE *fout5 = fopen("homomorphic.pgm", "w");
+
+    if (fout1 == 0 || fout2 == 0 || fout3 == 0 || fout4 == 0 || fout5 == 0)
+    {
+        fclose(fout1);
+        fclose(fout2);
+        fclose(fout3);
+        fclose(fout4);
+        fclose(fout5);
         printf("Error, aborting.\n");
         return -1;
     }
 
-    read_pgm_file(fin, &img);
+    printf("-------------------------------------------------------\n");
+    start_t = clock();
+    printf("Starting of the program, start_t = %ld\n", start_t);
 
-    // median_filter(&img, 3);
+    median_filter(&img1, 3);
 
-    // threshold(&img, 0x7A);
+    end_t = clock();
+    printf("End of the big loop, end_t = %ld\n", end_t);
+    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+    printf("(median) Total time taken by CPU: %f (s)\n", total_t);
+    printf("-------------------------------------------------------\n");
 
-    // morph_dilation(&img);
+    start_t = clock();
+    printf("Starting of the program, start_t = %ld\n", start_t);
 
-    // morph_erosion(&img);
+    threshold(&img2, 0x7A);
 
-    homomorphic_filter(&img);
+    end_t = clock();
+    printf("End of the big loop, end_t = %ld\n", end_t);
+    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+    printf("(threshold) Total time taken by CPU: %f (s)\n", total_t);
+    printf("-------------------------------------------------------\n");
 
-    write_pgm_file(fout, &img);
+    start_t = clock();
+    printf("Starting of the program, start_t = %ld\n", start_t);
 
-    fclose(fin);
-    fclose(fout);
+    threshold(&img3, 0x7A);
+    morph_dilation(&img3);
+
+    end_t = clock();
+    printf("End of the big loop, end_t = %ld\n", end_t);
+    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+    printf("(threshold + dilation) Total time taken by CPU: %f (s)\n", total_t);
+    printf("-------------------------------------------------------\n");
+
+    start_t = clock();
+    printf("Starting of the program, start_t = %ld\n", start_t);
+
+    threshold(&img4, 0x7A);
+    morph_erosion(&img4);
+
+    end_t = clock();
+    printf("End of the big loop, end_t = %ld\n", end_t);
+    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+    printf("(threshold + erosion) Total time taken by CPU: %f (s)\n", total_t);
+    printf("-------------------------------------------------------\n");
+
+    start_t = clock();
+    printf("Starting of the program, start_t = %ld\n", start_t);
+
+    homomorphic_filter(&img5);
+
+    end_t = clock();
+    printf("End of the big loop, end_t = %ld\n", end_t);
+    total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+    printf("(homomorphic) Total time taken by CPU: %f (s)\n", total_t);
+    printf("-------------------------------------------------------\n");
+
+    write_pgm_file(fout1, &img1);
+    write_pgm_file(fout2, &img2);
+    write_pgm_file(fout3, &img3);
+    write_pgm_file(fout4, &img4);
+    write_pgm_file(fout5, &img5);
+
+    fclose(fout1);
+    fclose(fout2);
+    fclose(fout3);
+    fclose(fout4);
+    fclose(fout5);
     return 0;
 }
 
@@ -466,7 +572,6 @@ void shift2(double **x, int width, int height)
     }
 }
 
-
 void homomorphic_filter(image *img)
 {
     double **img_copy_real = (double **)malloc(img->width * sizeof(double *));
@@ -492,7 +597,6 @@ void homomorphic_filter(image *img)
     shift2(img_copy_imag, img->width, img->height);
 
     // gaussian high pass filter
-
     int core_x = (img->width / 2); // Spectrum center coordinates
     int core_y = (img->height / 2);
     int d0 = 50; // Filter radius
